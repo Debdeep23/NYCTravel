@@ -1,10 +1,15 @@
 # Quick Reference Card
 
-## TL;DR - Just Run This! 🚀
+## TL;DR - For Large Datasets (23GB+) 🚀
 
 ```bash
 cd /home/user/NYCTravel/mta_mapreduce/post_processing
-./process_outputs.sh
+
+# Step 1: Aggregate on cluster (handles large datasets)
+./aggregate_on_cluster.sh
+
+# Step 2: Generate report
+./generate_report_local.sh
 ```
 
 **Then review your report**:
@@ -21,12 +26,19 @@ cat output_analysis/data_quality_report.md
 cd /home/user/NYCTravel/mta_mapreduce/post_processing
 ```
 
-### 2. Run Automated Processing
+### 2. Run Cluster Aggregation (Recommended for Large Datasets)
 ```bash
-./process_outputs.sh
+./aggregate_on_cluster.sh
 ```
 
-### 3. View Results
+This runs the aggregation as a MapReduce job on the cluster, avoiding memory issues.
+
+### 3. Generate Human-Readable Report
+```bash
+./generate_report_local.sh
+```
+
+### 4. View Results
 ```bash
 # View the markdown report
 cat output_analysis/data_quality_report.md
@@ -34,97 +46,78 @@ cat output_analysis/data_quality_report.md
 # View aggregated metrics
 cat output_analysis/profiling_summary.txt | head -50
 
-# View cleaned data sample
-cat output_analysis/cleaned_sample.csv | head -20
-
 # List all output files
 ls -lh output_analysis/
 ```
 
 ---
 
-## Alternative: Manual Steps
+## Quick Stats Only (30 seconds)
 
-```bash
-# 1. Create output directory
-mkdir -p output_analysis
-
-# 2. Aggregate profiling data
-hdfs dfs -cat /user/dn2491_nyu_edu/mta_profiling_full/part-* | \
-    python3 aggregate_profiling.py > output_analysis/profiling_summary.txt
-
-# 3. Generate markdown report
-python3 generate_report.py < output_analysis/profiling_summary.txt > output_analysis/data_quality_report.md
-
-# 4. Download cleaned data sample
-hdfs dfs -cat /user/dn2491_nyu_edu/mta_cleaned_full/part-* | head -1000 > output_analysis/cleaned_sample.csv
-```
-
----
-
-## Quick Stats (Fast, No Full Download)
+If you just want quick insights:
 
 ```bash
 ./quick_stats.sh
 ```
 
+This samples the first 10,000 lines and shows key statistics without downloading everything.
+
 ---
 
-## Files You'll Get
+## Understanding Your Outputs
+
+**After running the scripts, you'll have:**
 
 ```
 output_analysis/
-├── profiling_summary.txt      → Aggregated statistics (for data nerds)
-├── data_quality_report.md     → Human-readable report (for your paper) ⭐
-└── cleaned_sample.csv         → Sample of cleaned data (for inspection)
+├── profiling_summary.txt      - Aggregated profiling metrics (TSV format)
+└── data_quality_report.md     - Human-readable report for your paper
 ```
+
+**The report includes:**
+- Dataset overview and completeness metrics
+- Missing values analysis table
+- Data validation results
+- Distribution analysis (boroughs, transit modes, payment methods)
+- Top 20 stations
+- Ridership and transfer statistics
+- Temporal patterns
+- Data quality summary
 
 ---
 
-## Troubleshooting One-Liners
+## For Your Academic Report
 
+Copy relevant sections from `output_analysis/data_quality_report.md`:
+- Data quality tables
+- Distribution statistics
+- Top stations
+- Validation pass rates
+
+---
+
+## Troubleshooting
+
+**Problem**: Scripts not executable
 ```bash
-# Verify HDFS outputs exist
-hdfs dfs -ls /user/dn2491_nyu_edu/mta_profiling_full
-hdfs dfs -ls /user/dn2491_nyu_edu/mta_cleaned_full
-
-# Make scripts executable
 chmod +x *.sh *.py
+```
 
-# Check output sizes in HDFS
-hdfs dfs -du -h /user/dn2491_nyu_edu/
+**Problem**: HDFS path not found
+```bash
+hdfs dfs -ls /user/dn2491_nyu_edu/
+```
 
-# Count lines in profiling output
-hdfs dfs -cat /user/dn2491_nyu_edu/mta_profiling_full/part-* | wc -l
-
-# Count lines in cleaned output
-hdfs dfs -cat /user/dn2491_nyu_edu/mta_cleaned_full/part-* | wc -l
+**Problem**: Want to see cleaned data sample
+```bash
+hdfs dfs -cat /user/dn2491_nyu_edu/mta_cleaned_full/part-* | head -1000 > sample.csv
 ```
 
 ---
 
-## Time Estimates
+## File Locations
 
-| Task | Time |
-|------|------|
-| Quick stats (`./quick_stats.sh`) | 30 seconds |
-| Automated processing (`./process_outputs.sh`) | 5-10 minutes |
-| Manual processing (all steps) | 5-10 minutes |
-| Download full cleaned dataset | 10-30 minutes (depends on size) |
-
----
-
-## What Goes in Your Report
-
-From `data_quality_report.md`, copy these sections:
-
-1. ✅ Dataset Overview → Total records, completeness percentage
-2. ✅ Missing Values Analysis → Table showing per-column completeness
-3. ✅ Distribution Analysis → Borough/payment/transit mode tables
-4. ✅ Top 20 Stations → Table of busiest stations
-5. ✅ Ridership Analysis → Total ridership, categories
-6. ✅ Data Quality Summary → Unique stations, duplicates
-
----
-
-**See `STEP_BY_STEP_GUIDE.md` for detailed instructions**
+- **Raw profiling on HDFS**: `/user/dn2491_nyu_edu/mta_profiling_full`
+- **Aggregated profiling on HDFS**: `/user/dn2491_nyu_edu/mta_profiling_aggregated`
+- **Cleaned data on HDFS**: `/user/dn2491_nyu_edu/mta_cleaned_full`
+- **Local outputs**: `./output_analysis/`
