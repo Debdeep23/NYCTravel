@@ -84,6 +84,12 @@ mta_mapreduce/
 │   ├── run_cleaning.sh               # Execute cleaning MapReduce job
 │   ├── run_all.sh                    # Master script to run entire pipeline
 │   └── generate_report.py            # Generate comprehensive analysis report
+├── post_processing/                   # **NEW: Output aggregation tools**
+│   ├── README.md                     # Post-processing documentation
+│   ├── aggregate_profiling.py        # Aggregates large profiling outputs
+│   ├── generate_report.py            # Creates markdown report for papers
+│   ├── process_outputs.sh            # Automated post-processing pipeline
+│   └── quick_stats.sh                # Quick statistics without full download
 ├── output/
 │   ├── profiling/                    # Profiling job output
 │   ├── cleaned/                      # Cleaned dataset
@@ -301,6 +307,58 @@ The cleaning job performs the following operations:
 - Log all filtering decisions to stderr
 - Track counts of records filtered by reason
 - Handle malformed CSV rows gracefully
+
+---
+
+## Post-Processing Large Outputs
+
+### Problem
+
+The profiling job outputs can be **extremely large** (millions of lines) when processing the full 121M row dataset. This happens because the reducer doesn't properly aggregate by both category AND key - Hadoop only sorts by the first tab-delimited field (category), causing incomplete aggregation.
+
+### Solution
+
+The `post_processing/` directory contains scripts to aggregate and summarize these huge outputs into report-friendly formats.
+
+### Quick Start
+
+```bash
+cd mta_mapreduce/post_processing
+./process_outputs.sh
+```
+
+This will:
+1. Download and aggregate profiling data from HDFS
+2. Generate a human-readable markdown report
+3. Download a sample of cleaned data
+4. Display file size statistics
+
+**Output files** (in `./output_analysis/`):
+- `profiling_summary.txt` - Aggregated metrics (millions of lines → thousands)
+- `data_quality_report.md` - **Report suitable for academic papers** ✨
+- `cleaned_sample.csv` - Sample of cleaned data for inspection
+
+### Quick Statistics (No Full Download)
+
+```bash
+cd mta_mapreduce/post_processing
+./quick_stats.sh
+```
+
+Gets key statistics from a sample without downloading the entire dataset.
+
+### Manual Processing
+
+```bash
+# Aggregate profiling data
+hdfs dfs -cat /user/dn2491_nyu_edu/mta_profiling_full/part-* | \
+    python3 aggregate_profiling.py > profiling_summary.txt
+
+# Generate markdown report
+python3 generate_report.py < profiling_summary.txt > report.md
+```
+
+See `post_processing/README.md` for detailed documentation.
 
 ---
 
